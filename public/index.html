@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>VoxDesk — AI Voice Call Assistant</title>
+  <meta name="description" content="Production AI voice agent: real-time calls, streaming transcripts, analytics." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%2334d399'/%3E%3Cpath d='M10 17v-2m4 6V11m4 9V12m4 5v-2' stroke='%2306100d' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <svg class="sprite" aria-hidden="true">
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.6"/><rect x="14" y="3" width="7" height="7" rx="1.6"/><rect x="3" y="14" width="7" height="7" rx="1.6"/><rect x="14" y="14" width="7" height="7" rx="1.6"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M6.6 3.5h2.2l1.5 4-2 1.4a11 11 0 0 0 6.8 6.8l1.4-2 4 1.5v2.2a2.4 2.4 0 0 1-2.6 2.4A17.6 17.6 0 0 1 4.2 6.1 2.4 2.4 0 0 1 6.6 3.5Z"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M3 20a6 6 0 0 1 12 0M16 5.5a3.4 3.4 0 0 1 0 6.6M17 20a6 6 0 0 0-2-4.5"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 4.1V4a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5.9Z"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 19h16"/></symbol>
+    <symbol id="i-hangup" viewBox="0 0 24 24"><path d="M2.5 9.6c5-4.8 14-4.8 19 0l-2.2 3.2-3.4-1.1-.5-2.6a10.8 10.8 0 0 0-6.8 0l-.5 2.6-3.4 1.1Z"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M21 3 10.5 13.5M21 3l-6.5 18-4-8-8-4Z"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></symbol>
+    <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M2 12h4l2.5-7 4 14 3-9 2.5 2H22"/></symbol>
+  </svg>
+
+  <div class="app">
+    <aside class="sidebar">
+      <a class="brand" href="#overview" data-nav="overview">
+        <span class="brand-mark"><svg viewBox="0 0 24 24"><path d="M5 13v-2m4.5 7V6m5 11V7m4.5 6v-2" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></span>
+        <span class="brand-text"><strong>VoxDesk</strong><small>voice operations</small></span>
+      </a>
+      <nav class="nav" aria-label="Main">
+        <button class="nav-item active" data-view="overview"><svg class="ic"><use href="#i-grid"/></svg>Overview</button>
+        <button class="nav-item" data-view="calls"><svg class="ic"><use href="#i-phone"/></svg>Calls</button>
+        <button class="nav-item" data-view="test"><svg class="ic"><use href="#i-mic"/></svg>Test line</button>
+        <button class="nav-item" data-view="contacts"><svg class="ic"><use href="#i-users"/></svg>Contacts</button>
+        <button class="nav-item" data-view="settings"><svg class="ic"><use href="#i-settings"/></svg>Agent settings</button>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="stack-status" id="stack-status">
+          <div class="stack-row"><span class="dot" id="dot-llm"></span><span>LLM</span><b id="lbl-llm">…</b></div>
+          <div class="stack-row"><span class="dot" id="dot-stt"></span><span>STT</span><b id="lbl-stt">…</b></div>
+          <div class="stack-row"><span class="dot" id="dot-tts"></span><span>TTS</span><b id="lbl-tts">…</b></div>
+          <div class="stack-row"><span class="dot" id="dot-tel"></span><span>Telephony</span><b id="lbl-tel">…</b></div>
+        </div>
+        <p class="fineprint" id="build-line">v1.0.0</p>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="titles">
+          <h1 id="page-title">Overview</h1>
+          <p id="page-sub">Live operations for your AI voice agent.</p>
+        </div>
+        <div class="top-actions">
+          <span class="pill" id="conn-pill"><span class="dot"></span><span id="conn-text">connecting</span></span>
+          <button class="btn primary" id="btn-new-call"><svg class="ic"><use href="#i-plus"/></svg>New call</button>
+        </div>
+      </header>
+
+      <div id="demo-banner" class="banner hidden">
+        <div>
+          <strong>Demo mode.</strong>
+          <span id="demo-banner-text">No provider keys detected — the agent runs on the built-in demo brain.</span>
+        </div>
+        <button class="btn ghost sm" data-goto="settings">Configure providers</button>
+      </div>
+
+      <!-- ---------------------------------------------------------- overview -->
+      <section class="view" id="view-overview">
+        <div class="stats">
+          <article class="card stat">
+            <span class="stat-label">Calls today</span>
+            <strong class="stat-value" id="stat-today">0</strong>
+            <span class="stat-hint" id="stat-total">0 all time</span>
+          </article>
+          <article class="card stat">
+            <span class="stat-label">Active now</span>
+            <strong class="stat-value" id="stat-active">0</strong>
+            <span class="stat-hint">live sessions</span>
+          </article>
+          <article class="card stat">
+            <span class="stat-label">Avg. handle time</span>
+            <strong class="stat-value" id="stat-aht">0:00</strong>
+            <span class="stat-hint" id="stat-talk">0 talk minutes</span>
+          </article>
+          <article class="card stat">
+            <span class="stat-label">Resolution rate</span>
+            <strong class="stat-value" id="stat-res">—</strong>
+            <span class="stat-hint" id="stat-completed">0 completed</span>
+          </article>
+        </div>
+
+        <div class="grid-2">
+          <article class="card">
+            <header class="card-head">
+              <div><h2>Call volume</h2><p>Last 14 days</p></div>
+              <div class="legend"><span class="swatch"></span>calls</div>
+            </header>
+            <div class="chart" id="volume-chart" aria-label="Call volume chart"></div>
+          </article>
+          <article class="card">
+            <header class="card-head">
+              <div><h2>Live now</h2><p>Real-time sessions</p></div>
+              <span class="pill subtle" id="live-count">0</span>
+            </header>
+            <div class="live-list" id="live-list"><div class="empty">No active calls.<br /><span>Start one from the test line.</span></div></div>
+          </article>
+        </div>
+
+        <article class="card">
+          <header class="card-head">
+            <div><h2>Recent calls</h2><p>Newest first</p></div>
+            <button class="btn ghost sm" data-goto="calls">View all</button>
+          </header>
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>Started</th><th>Direction</th><th>Party</th><th>Status</th><th>Duration</th><th>Turns</th><th>Summary</th></tr></thead>
+              <tbody id="recent-body"></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <!-- ------------------------------------------------------------- calls -->
+      <section class="view hidden" id="view-calls">
+        <article class="card">
+          <div class="toolbar">
+            <label class="search"><svg class="ic"><use href="#i-search"/></svg><input id="calls-search" type="search" placeholder="Search number, name, summary…" /></label>
+            <select id="calls-status" class="select">
+              <option value="">All statuses</option>
+              <option value="in_progress">In progress</option>
+              <option value="completed">Completed</option>
+              <option value="failed">Failed</option>
+              <option value="no_answer">No answer</option>
+            </select>
+            <button class="btn ghost" id="calls-refresh">Refresh</button>
+            <span class="spacer"></span>
+            <span class="muted" id="calls-count"></span>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>Started</th><th>Direction</th><th>Party</th><th>Status</th><th>Duration</th><th>Turns</th><th>Outcome</th><th>Summary</th></tr></thead>
+              <tbody id="calls-body"></tbody>
+            </table>
+          </div>
+          <div class="pager">
+            <button class="btn ghost sm" id="page-prev">Previous</button>
+            <span id="page-label" class="muted">Page 1</span>
+            <button class="btn ghost sm" id="page-next">Next</button>
+          </div>
+        </article>
+      </section>
+
+      <!-- -------------------------------------------------------------- test -->
+      <section class="view hidden" id="view-test">
+        <div class="grid-2 wide-left">
+          <article class="card call-console">
+            <div class="console-top">
+              <div class="avatar" id="avatar">
+                <span class="avatar-ring"></span>
+                <svg class="ic"><use href="#i-mic"/></svg>
+              </div>
+              <h2 id="test-agent-name">Your agent</h2>
+              <p class="muted" id="test-status">Not connected</p>
+              <p class="timer" id="test-timer">00:00</p>
+            </div>
+            <div class="meter"><div class="meter-fill" id="mic-meter"></div></div>
+            <div class="console-actions">
+              <button class="btn primary big" id="btn-start-test"><svg class="ic"><use href="#i-phone"/></svg>Start call</button>
+              <button class="btn danger big hidden" id="btn-end-test"><svg class="ic"><use href="#i-hangup"/></svg>End call</button>
+            </div>
+            <label class="toggle"><input type="checkbox" id="test-barge" /> <span>Talk over the agent</span><small>headphones recommended</small></label>
+            <form class="say-form" id="say-form">
+              <input id="say-input" placeholder="Type what the caller says…" autocomplete="off" disabled />
+              <button class="btn icon" id="say-send" type="submit" disabled aria-label="Send"><svg class="ic"><use href="#i-send"/></svg></button>
+            </form>
+            <p class="hint" id="test-hint">Microphone audio is streamed to your STT provider. Typing works even without one.</p>
+          </article>
+
+          <article class="card transcript-card">
+            <header class="card-head">
+              <div><h2>Live transcript</h2><p id="test-call-id">No call yet</p></div>
+              <span class="pill subtle" id="test-turn-pill">—</span>
+            </header>
+            <div class="transcript" id="test-transcript">
+              <div class="empty transcript-empty">
+                <svg class="ic empty-ic"><use href="#i-pulse"/></svg>
+                <strong>No conversation yet</strong>
+                <span>Start a call — the agent's words appear here as they are spoken.</span>
+              </div>
+            </div>
+            <details class="events">
+              <summary>Realtime events</summary>
+              <div class="event-log" id="test-events"></div>
+            </details>
+          </article>
+        </div>
+        <article class="card tips">
+          <h3>How the test line works</h3>
+          <ol>
+            <li>Your browser captures 16 kHz PCM and streams it over WebSocket to the call engine.</li>
+            <li>VAD detects speech, STT transcribes, the LLM streams a reply, TTS is chunked into 20 ms frames.</li>
+            <li>Speaking over the agent triggers barge-in: playback and generation stop immediately.</li>
+          </ol>
+        </article>
+      </section>
+
+      <!-- ---------------------------------------------------------- contacts -->
+      <section class="view hidden" id="view-contacts">
+        <div class="grid-2">
+          <article class="card">
+            <header class="card-head"><div><h2>Add contact</h2><p>Outbound dial list</p></div></header>
+            <form id="contact-form" class="form">
+              <label>Name<input name="name" required maxlength="120" placeholder="Jordan Lee" /></label>
+              <label>Phone<input name="phone" required maxlength="30" placeholder="+14155550123" /></label>
+              <div class="form-row">
+                <label>Email<input name="email" type="email" maxlength="200" placeholder="jordan@acme.com" /></label>
+                <label>Company<input name="company" maxlength="120" placeholder="Acme" /></label>
+              </div>
+              <label>Notes<textarea name="notes" rows="2" maxlength="2000" placeholder="Renewal in March, prefers mornings"></textarea></label>
+              <button class="btn primary" type="submit">Save contact</button>
+            </form>
+          </article>
+          <article class="card">
+            <header class="card-head"><div><h2>Contacts</h2><p id="contacts-count">0 saved</p></div></header>
+            <div class="table-wrap">
+              <table class="table">
+                <thead><tr><th>Name</th><th>Phone</th><th>Company</th><th></th></tr></thead>
+                <tbody id="contacts-body"></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ---------------------------------------------------------- settings -->
+      <section class="view hidden" id="view-settings">
+        <div class="grid-2 wide-left">
+          <article class="card">
+            <header class="card-head"><div><h2>Agent behaviour</h2><p>Applied to every new call</p></div></header>
+            <form id="settings-form" class="form">
+              <div class="form-row">
+                <label>Agent name<input name="name" maxlength="60" /></label>
+                <label>Company<input name="company" maxlength="120" /></label>
+              </div>
+              <label>Greeting<textarea name="greeting" rows="2" maxlength="600"></textarea></label>
+              <label>Persona / system prompt<textarea name="persona" rows="4" maxlength="4000"></textarea></label>
+              <label>Knowledge base<textarea name="knowledge" rows="6" maxlength="20000" placeholder="Pricing, hours, policies, FAQ…"></textarea></label>
+              <div class="form-row">
+                <label>Voice ID<input name="voice" maxlength="120" placeholder="Provider voice id" /></label>
+                <label>Language<input name="language" maxlength="20" placeholder="en-US" /></label>
+              </div>
+              <div class="form-row">
+                <label>Fallback line<input name="fallback" maxlength="600" /></label>
+                <label>Transfer number<input name="transferNumber" maxlength="30" placeholder="+14155550100" /></label>
+              </div>
+              <div class="form-row">
+                <label>Max turns<input name="maxTurns" type="number" min="1" max="200" /></label>
+                <label class="check"><input name="bargeIn" type="checkbox" /> Allow caller barge-in</label>
+              </div>
+              <button class="btn primary" type="submit">Save settings</button>
+            </form>
+          </article>
+
+          <div class="stack">
+            <article class="card">
+              <header class="card-head"><div><h2>Provider stack</h2><p>Detected from environment</p></div></header>
+              <div class="provider-list" id="settings-providers"></div>
+              <div class="row-actions">
+                <button class="btn ghost sm" id="btn-test-llm" type="button">Test LLM</button>
+                <button class="btn ghost sm" id="btn-test-tts" type="button">Test voice</button>
+              </div>
+              <p class="hint" id="provider-test-result">Runs a live round trip against the configured provider.</p>
+            </article>
+            <article class="card">
+              <header class="card-head"><div><h2>Dashboard access</h2><p>API key for this browser</p></div></header>
+              <form id="token-form" class="form">
+                <label>API key<input id="token-input" type="password" placeholder="Paste API_KEYS value" autocomplete="off" /></label>
+                <div class="row-actions">
+                  <button class="btn primary" type="submit">Save key</button>
+                  <button class="btn ghost" type="button" id="btn-clear-token">Clear</button>
+                </div>
+              </form>
+              <p class="hint">Stored in this browser only. Required when <code>API_KEYS</code> is set.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- call detail drawer -->
+  <div class="drawer-backdrop hidden" id="drawer-backdrop"></div>
+  <aside class="drawer hidden" id="drawer" aria-label="Call details">
+    <header class="drawer-head">
+      <div>
+        <p class="eyebrow" id="drawer-eyebrow">Call</p>
+        <h2 id="drawer-title">Call details</h2>
+        <p class="muted" id="drawer-sub"></p>
+      </div>
+      <button class="btn icon" id="drawer-close" aria-label="Close"><svg class="ic"><use href="#i-x"/></svg></button>
+    </header>
+    <div class="drawer-meta" id="drawer-meta"></div>
+    <div class="drawer-body">
+      <section class="drawer-section" id="drawer-summary-wrap">
+        <h3>Summary</h3>
+        <p id="drawer-summary" class="summary-text">No summary yet.</p>
+        <ul id="drawer-actions" class="action-list"></ul>
+      </section>
+      <section class="drawer-section">
+        <h3>Transcript</h3>
+        <div class="transcript compact" id="drawer-transcript"></div>
+      </section>
+      <details class="events">
+        <summary>Event log</summary>
+        <div class="event-log" id="drawer-events"></div>
+      </details>
+    </div>
+    <footer class="drawer-foot">
+      <a class="btn ghost" id="drawer-export" href="#"><svg class="ic"><use href="#i-download"/></svg>Export</a>
+      <button class="btn danger hidden" id="drawer-hangup"><svg class="ic"><use href="#i-hangup"/></svg>Hang up</button>
+      <button class="btn primary" id="drawer-recall">Call again</button>
+    </footer>
+  </aside>
+
+  <!-- new call modal -->
+  <div class="overlay hidden" id="new-call-modal">
+    <div class="modal">
+      <header class="modal-head">
+        <h2>Place an outbound call</h2>
+        <button class="btn icon" data-close-modal aria-label="Close"><svg class="ic"><use href="#i-x"/></svg></button>
+      </header>
+      <form id="new-call-form" class="form">
+        <label>Phone number (E.164)<input name="to" required placeholder="+14155550123" /></label>
+        <label>Contact name<input name="contactName" maxlength="120" placeholder="Optional" /></label>
+        <label>Opening line override<input name="greeting" maxlength="600" placeholder="Optional — defaults to the agent greeting" /></label>
+        <p class="hint" id="call-capability"></p>
+        <div class="row-actions">
+          <button class="btn ghost" type="button" data-close-modal>Cancel</button>
+          <button class="btn primary" type="submit">Dial</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- auth overlay -->
+  <div class="overlay hidden" id="login-overlay">
+    <div class="modal small">
+      <header class="modal-head"><h2>Dashboard locked</h2></header>
+      <p class="muted">This deployment requires an API key. Paste the value of <code>API_KEYS</code>.</p>
+      <form id="login-form" class="form">
+        <label>API key<input id="login-input" type="password" required autocomplete="off" /></label>
+        <button class="btn primary" type="submit">Unlock</button>
+      </form>
+      <p class="hint" id="login-error"></p>
+    </div>
+  </div>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <script src="/audio.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
