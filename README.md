@@ -1,5 +1,7 @@
 # VoxDesk — LangChain + FastAPI AI voice call assistant
 
+**v1.0.1** · [changelog](CHANGELOG.md)
+
 A production-shaped AI phone agent in **Python**, built with **FastAPI** and
 **LangChain**, with a real-time voice pipeline, Twilio telephony, streaming
 transcripts and an operations dashboard.
