@@ -1,7 +1,8 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 import base64
+import struct
 import json
 import threading
 import time
@@ -100,6 +101,63 @@ async def test_browser_call_end_to_end(live_server):
     assert detail["turns"] == 1
     assert len(detail["messages"]) >= 3
     assert detail["messages"][1]["role"] == "user"
+
+
+@pytest.mark.asyncio
+async def test_barge_in_cancels_agent_and_then_answers_next_question(live_server):
+    _base, ws_base, _store, _config = live_server
+    interrupted = False
+    heard: list[str] = []
+    statuses: list[str] = []
+
+    async with websockets.connect(f"{ws_base}/ws/test-call?token=test-key", max_size=2**24) as ws:
+        ready = json.loads(await asyncio.wait_for(ws.recv(), 10))
+        assert ready["type"] == "ready"
+
+        # Start a long answer, wait until the agent is actually speaking.
+        await ws.send(json.dumps({"type": "text", "text": "Tell me everything about pricing and plans."}))
+        deadline = asyncio.get_running_loop().time() + 25
+        while asyncio.get_running_loop().time() < deadline:
+            message = json.loads(await asyncio.wait_for(ws.recv(), 12))
+            if message["type"] == "event":
+                event = message["event"]
+                if event["type"] == "call.status":
+                    statuses.append(event["data"]["status"])
+                    if event["data"]["status"] == "speaking":
+                        break
+
+        # Caller talks over the agent: loud 16 kHz PCM frames trip the VAD.
+        loud = base64.b64encode(struct.pack("<320h", *([int(0.4 * 32767)] * 320))).decode()
+        for _ in range(14):
+            await ws.send(json.dumps({"type": "audio", "payload": loud}))
+            await asyncio.sleep(0.02)
+
+        deadline = asyncio.get_running_loop().time() + 10
+        while asyncio.get_running_loop().time() < deadline:
+            message = json.loads(await asyncio.wait_for(ws.recv(), 10))
+            if message["type"] == "event":
+                event = message["event"]
+                if event["type"] == "assistant.interrupted":
+                    interrupted = True
+                    break
+                if event["type"] == "assistant.message" and not event["data"].get("scripted"):
+                    heard.append(event["data"]["text"])
+
+        assert interrupted, f"barge-in did not cancel the reply (statuses={statuses}, heard={heard})"
+
+        # The next caller turn is answered normally after the interruption.
+        await ws.send(json.dumps({"type": "text", "text": "What are your support hours?"}))
+        deadline = asyncio.get_running_loop().time() + 30
+        while asyncio.get_running_loop().time() < deadline:
+            message = json.loads(await asyncio.wait_for(ws.recv(), 12))
+            if message["type"] == "event" and message["event"]["type"] == "assistant.message":
+                text = message["event"]["data"]["text"]
+                if "9 a.m." in text or "Monday" in text:
+                    heard.append(text)
+                    break
+        await ws.send(json.dumps({"type": "end"}))
+
+    assert any("9 a.m." in text or "Monday" in text for text in heard), heard
 
 
 @pytest.mark.asyncio

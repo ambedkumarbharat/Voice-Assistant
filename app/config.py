@@ -132,6 +132,7 @@ class AgentConfig:
     barge_in: bool
     silence_reprompt_ms: int
     hangup_after_silence_ms: int
+    first_chunk_chars: int
 
 
 @dataclass
@@ -359,13 +360,14 @@ def load_settings(**overrides: object) -> Settings:
                 "You are a warm, efficient voice assistant who handles inbound customer calls. "
                 "You speak in short, natural sentences and confirm important details before moving on.",
             ),
-            greeting=_str("AGENT_GREETING", "Hi, thanks for calling. This is Ava - how can I help you today?"),
+            greeting=_str("AGENT_GREETING", "Hi {name}, thanks for calling. This is Ava - how can I help you today?"),
             fallback=_str("AGENT_FALLBACK", "Sorry, I didn't catch that. Could you say that again?"),
             max_turns=_int("AGENT_MAX_TURNS", 40, 1, 500),
             max_call_seconds=_int("AGENT_MAX_CALL_SECONDS", 900, 30, 7200),
             barge_in=_bool("AGENT_BARGE_IN", True),
             silence_reprompt_ms=_int("AGENT_SILENCE_REPROMPT_MS", 7000, 1000),
             hangup_after_silence_ms=_int("AGENT_HANGUP_SILENCE_MS", 20000, 5000),
+            first_chunk_chars=_int("AGENT_FIRST_CHUNK_CHARS", 36, 12, 120),
         ),
         warnings=warnings,
     )

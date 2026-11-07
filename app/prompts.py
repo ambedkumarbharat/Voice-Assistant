@@ -158,6 +158,19 @@ def summary_parser() -> JsonOutputParser:
     return JsonOutputParser(pydantic_object=CallSummary)
 
 
+def render_greeting(greeting: str, name: str | None) -> str:
+    """Fill `{name}` with the caller's first name, or `there` when unknown.
+
+    One template serves inbound calls (contact lookup by number) and outbound
+    calls (dial-list name) without duplicating greeting strings.
+    """
+    if "{name}" not in greeting:
+        return greeting
+    cleaned = (name or "").strip()
+    first = cleaned.split(" ")[0] if cleaned else ""
+    return greeting.replace("{name}", first or "there")
+
+
 def build_history(history: list[dict[str, str]], budget_chars: int = 12000) -> list[BaseMessage]:
     """Keep the newest turns inside a predictable prompt budget."""
     messages: list[BaseMessage] = []

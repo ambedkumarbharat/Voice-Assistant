@@ -310,6 +310,14 @@ class Store:
                 ).fetchall()
         return [dict(row) for row in rows]
 
+    def find_contact_by_phone(self, phone: str) -> dict[str, Any] | None:
+        cleaned = (phone or "").strip()
+        if not cleaned:
+            return None
+        with self._lock:
+            row = self._conn.execute("SELECT * FROM contacts WHERE phone = ?", (cleaned,)).fetchone()
+        return dict(row) if row else None
+
     def delete_contact(self, contact_id: str) -> bool:
         with self._lock, self._conn:
             cursor = self._conn.execute("DELETE FROM contacts WHERE id = ?", (contact_id,))

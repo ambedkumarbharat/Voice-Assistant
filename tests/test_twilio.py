@@ -122,6 +122,16 @@ async def test_transfer_requires_e164():
         await telephony.transfer("CA1", "555-0123")
 
 
+def test_inbound_greeting_uses_contact_name(twilio_app):
+    client, store = twilio_app
+    store.upsert_contact(name="Priya Raman", phone="+14155550142", company="Lumen")
+    params = {"CallSid": "CAinbound999", "From": "+14155550142", "To": "+14155550100"}
+    url = PUBLIC + "/webhooks/twilio/voice"
+    response = client.post(url, data=params, headers={"x-twilio-signature": sign(url, params)})
+    assert response.status_code == 200
+    assert "Hi Priya, thanks for calling" in response.text
+
+
 def test_outbound_flow_with_mock_carrier(twilio_app, mock_twilio):
     client, store = twilio_app
     auth = {"authorization": "Bearer test-key"}

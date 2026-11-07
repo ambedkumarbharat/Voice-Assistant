@@ -30,7 +30,7 @@ from .config import Settings, get_settings
 from .db import Store, now_ms
 from .errors import ProviderError
 from .hub import CallHub
-from .prompts import AgentSettings, SETTINGS_KEY, load_agent_settings
+from .prompts import AgentSettings, SETTINGS_KEY, load_agent_settings, render_greeting
 from .providers import Providers, build_providers
 from .session import CallSession
 from .telephony import TwilioTelephony
@@ -549,8 +549,14 @@ def create_app(
             call_id = record["id"]
 
         agent = load_agent_settings(db, config)
+        if not record.get("contact_name"):
+            contact = db.find_contact_by_phone(params.get("From") or "")
+            if contact:
+                db.update_call(call_id, {"contact_name": contact["name"]})
+                record = db.get_call(call_id) or record
         metadata = parse_json(record.get("metadata"), {})
         greeting = (metadata.get("greeting") or "").strip() or agent.greeting
+        greeting = render_greeting(greeting, record.get("contact_name"))
         use_twiml_greeting = not prov.tts.live
         token = config.telephony.auth_token
         sig = f"&sig={media_signature(token, call_id)}" if token else ""
@@ -765,7 +771,9 @@ def create_app(
                     except Exception:
                         pass
                 elif kind == "text" and isinstance(message.get("text"), str):
-                    await session.inject_text(message["text"])
+                    # Never block the receive loop: the agent's reply takes seconds
+                    # and incoming audio must still be processed for barge-in.
+                    asyncio.create_task(session.inject_text(message["text"]))
                 elif kind == "end":
                     await session.end("client_hangup")
                     break

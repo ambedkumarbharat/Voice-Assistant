@@ -19,6 +19,7 @@ from .prompts import (
     AgentSettings,
     build_system_prompt,
     load_agent_settings,
+    render_greeting,
     sanitize_for_speech,
 )
 from .providers import Providers
@@ -63,6 +64,7 @@ class CallSession:
         self.agent = agent or load_agent_settings(store, config)
         self.system_prompt = build_system_prompt(self.agent, config)
         self.greeting_override = greeting
+        self.caller_name = (contact_name or "").strip() or None
         self.provider_call_id = provider_call_id
         self.started_at = now_ms()
         self.turns = 0
@@ -118,6 +120,7 @@ class CallSession:
         self._turn_started = 0
         self._first_audio_ms: int | None = None
         self._last_level_publish = 0
+        self._caller_speaking = False
 
     # ------------------------------------------------------------- lifecycle ---
 
@@ -153,6 +156,7 @@ class CallSession:
         await self._connect_stt()
 
         greeting = self.agent.greeting if self.greeting_override is None else self.greeting_override
+        greeting = render_greeting(greeting, self.caller_name)
         if greeting and not self._ended:
             # Persist the scripted greeting before synthesis so the transcript is
             # ordered even if the caller barges in immediately.
@@ -180,17 +184,21 @@ class CallSession:
                     log.debug("stt write failed: %s", error)
 
             if decision.speech_start:
+                self._caller_speaking = True
                 self._clear_silence()
                 if self.agent.barge_in and self.status in {"speaking", "thinking"}:
                     self.interrupt("caller_barge_in")
                 self.publish("caller.speaking", {"levelDb": round(decision.level_db)})
             if decision.speech_end:
+                self._caller_speaking = False
                 if self._stt is not None:
                     try:
                         await self._stt.end_utterance()
                     except Exception:
                         pass
                 self.publish("caller.silence", {})
+                if self.status == "listening":
+                    self._arm_silence()
 
             current = now_ms()
             if current - self._last_level_publish > 100:
@@ -411,7 +419,11 @@ class CallSession:
         self._turn_started = now_ms()
         self._first_audio_ms = None
         self._set_status("thinking")
-        segmenter = SentenceSegmenter(min_chars=30, max_chars=220)
+        segmenter = SentenceSegmenter(
+            min_chars=30,
+            max_chars=220,
+            first_chunk_chars=self.config.agent.first_chunk_chars,
+        )
 
         try:
             await self.providers.llm.stream_reply(
@@ -531,7 +543,7 @@ class CallSession:
 
     def _arm_silence(self) -> None:
         self._clear_silence()
-        if self._ended:
+        if self._ended or self._caller_speaking:
             return
         self._silence_tasks = [
             asyncio.create_task(self._silence_reprompt()),
@@ -548,7 +560,7 @@ class CallSession:
             await asyncio.sleep(self.config.agent.silence_reprompt_ms / 1000)
         except asyncio.CancelledError:
             return
-        if self._ended or self.status != "listening":
+        if self._ended or self.status != "listening" or self._caller_speaking:
             return
         await self._say(self.agent.fallback, record=True)
         if not self._ended:
@@ -559,7 +571,7 @@ class CallSession:
             await asyncio.sleep(self.config.agent.hangup_after_silence_ms / 1000)
         except asyncio.CancelledError:
             return
-        if not self._ended and self.status == "listening":
+        if not self._ended and self.status == "listening" and not self._caller_speaking:
             await self.end("silence_timeout")
 
     async def _max_duration(self) -> None:

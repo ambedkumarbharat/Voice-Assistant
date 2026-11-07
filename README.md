@@ -55,9 +55,10 @@ async for token in chain.astream({"system_prompt": ..., "history": [...]}):
 - **Provider flexibility** — LLM via LangChain; STT via Deepgram streaming or
   OpenAI batch; TTS via ElevenLabs, OpenAI or Deepgram Aura. Explicit demo
   fallbacks when keys are absent.
-- **Phone-grade agent behaviour** — short spoken turns, no markdown, one question
-  at a time, editable knowledge base, escalation/privacy guardrails, warm
-  transfer, transfer-marker filtering so control tokens are never spoken.
+- **Phone-grade agent behaviour** — greets known callers by first name (outbound
+  dial-list name or inbound contact lookup), short spoken turns, no markdown, one
+  question at a time, editable knowledge base, escalation/privacy guardrails,
+  warm transfer, transfer-marker filtering so control tokens are never spoken.
 - **Operations dashboard** — live calls, KPIs, 14-day volume, searchable history,
   transcripts, summaries, contacts, agent settings, provider self-tests.
   Zero-build HTML/CSS/JS served by FastAPI.
@@ -86,13 +87,36 @@ to the agent.
 
 ```bash
 python scripts/seed.py --yes    # populate the dashboard with 8 demo calls
-pytest -q                       # 44 tests
+pytest -q                       # 49 tests
 python scripts/smoke.py         # real server + WebSocket end-to-end call
 ```
 
 > `run.py` inserts the project root on `sys.path`, so it works even in Python
 > distributions that run isolated/safe-path. In a normal environment
 > `uvicorn app.main:app --reload` also works.
+
+## Latency and barge-in
+
+Two behaviours matter on a real call:
+
+**1. The agent does not wait for the full answer.** LangChain streams tokens; the
+segmenter cuts the first speakable piece at ~36 characters (`AGENT_FIRST_CHUNK_CHARS`,
+roughly 7-9 words) and every later piece at a sentence or clause boundary. Each
+piece is synthesized immediately while the model keeps generating, and audio is
+released as 20 ms frames. So time-to-first-audio is *first chunk + TTS latency*,
+not the length of the whole reply. Lower the threshold to ~24 characters for an
+even faster start; raise it for smoother prosody.
+
+**2. The caller can interrupt.** The VAD needs three 20 ms speech frames to fire.
+It then cancels the LangChain stream (cancel event), cancels in-flight TTS tasks,
+flushes the local audio queue and clears Twilio's buffer. STT keeps receiving
+through the interruption; when the caller stops, Deepgram endpointing (~320 ms)
+plus a 550 ms transcript debounce combine the whole utterance, then the agent
+replies to the new question. Silence timers are suppressed while the caller is
+speaking, so a long question never triggers a reprompt.
+
+This is covered by `test_barge_in_cancels_agent_and_then_answers_next_question`
+(real WebSocket audio + next-turn reply) and by the unit tests for early chunking.
 
 ## Configure providers
 
@@ -199,7 +223,7 @@ TTS tasks and queued audio, then records what was actually spoken.
 ## Tests
 
 ```bash
-pytest -q                  # 44 tests
+pytest -q                  # 49 tests
 python scripts/smoke.py    # boots uvicorn + drives a real call over WebSocket
 ```
 
@@ -284,7 +308,7 @@ app/
   api.py          FastAPI routes, Twilio webhooks, WebSockets, static dashboard
   main.py         ASGI app
 public/           zero-build dashboard
-tests/            44 pytest tests
+tests/            49 pytest tests
 scripts/          seed.py, smoke.py, check_live.py
 ```
 
